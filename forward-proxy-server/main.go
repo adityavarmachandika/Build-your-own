@@ -4,47 +4,58 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"os"
+
 	// "net/url"
+	"log"
 )
 
+var infologger, errorLogger *log.Logger
 
-func baseHandler(w http.ResponseWriter, r *http.Request){
+func baseHandler(w http.ResponseWriter, r *http.Request) {
 
-	fmt.Println(*r)
+	targetHostAdd := r.RequestURI
 
-	targetHostAdd:= r.RequestURI;
-
-	if targetHostAdd == ""{
-		w.Write([]byte("there is no host name in the reqest"))
+	infologger.Println("requset object", r)
+	infologger.Println("r.requesturi : ", targetHostAdd, "r.remoteaddr : ", r.RemoteAddr)
+	if targetHostAdd == "" {
+		errorLogger.Println("No host address present")
+		w.Write([]byte("there is no host name in the request"))
 		return
 	}
 
-	//using net/url package to parse the hosturl
-	// parsedURL,err:= url.Parse(targetHostAdd)
+	outRequest, err := http.NewRequest(r.Method, targetHostAdd, r.Body)
 
-	// if err != nil{
-	// 	panic(err)
-	// }
+	if err!=nil{
+		errorLogger.Println("invalid request method : ", r.Method, " request Uri : ", r.RequestURI, "request body : ", r.Body)
+		w.WriteHeader(http.StatusBadRequest)
+		w.Write([]byte("Incorrect method or uri"))
+		return
+	}
+	
+	hopByHopHeaderMap := map[string]bool{"Connection": true,
+		"Keep-Alive":          true,
+		"Proxy-Authenticate":  true,
+		"Proxy-Authorization": true,
+		"Te":                  true,
+		"Trailer":             true,
+		"Transfer-Encoding":   true,
+		"Upgrade":             true,
+	}
+	for key, values := range r.Header {
 
-	//this is the parsed url
-	// fmt.Printf("%v\n",parsedURL.Scheme)
-	// fmt.Printf("%v\n",parsedURL.Host)
-	// fmt.Printf("%v\n",parsedURL.Fragment)
-	// fmt.Printf("%v\n",*parsedURL)
+		if hopByHopHeaderMap[key]{
+			continue
+		}
+		for _, value := range values {
+			outRequest.Header.Add(key, value)
+		}
+	}
 
-	//need to do a url validation here.
-
-	outRequest,err:= http.NewRequest(r.Method,targetHostAdd,r.Body)
-
-	fmt.Println(targetHostAdd)
-
-	outRequest.Header=r.Header.Clone()
-
-	outRequest.Host=targetHostAdd
+	outRequest.Host = outRequest.URL.Host
 
 	//creates a client before sending a requset.
 	client := &http.Client{}
-
 
 	// 6. Send the request out to the open web
 	resp, err := client.Do(outRequest)
@@ -52,30 +63,47 @@ func baseHandler(w http.ResponseWriter, r *http.Request){
 		http.Error(w, "Proxy destination unreachable: "+err.Error(), http.StatusBadGateway)
 		return
 	}
+	defer resp.Body.Close() 
 
-	for key,values :=range resp.Header{
-		for _,val :=range values{
-			w.Header().Add(key,val)
+	for key, values := range resp.Header {
+
+		if hopByHopHeaderMap[key]{
+			continue
+		}
+		for _, val := range values {
+			w.Header().Add(key, val)
 		}
 	}
-	_,err=io.Copy(w,resp.Body)
 
-	if err != nil{
+	w.WriteHeader(resp.StatusCode)
+	//copies the response from the client. once done response is returned.
+	_, err = io.Copy(w, resp.Body)
+
+
+	if err != nil {
 		fmt.Println("there is an error while sending the response", err)
 	}
 
 }
 func main() {
-	fmt.Println("Hello world")
 
-	port:=":8080"
+	logFile, err := os.OpenFile("forwardProxyServer.log", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0600)
+	if err != nil {
+		fmt.Println("logfile not created. server is stopped")
+		return
+	}
+	infologger = log.New(logFile, "INFO:", log.Lshortfile)
+	errorLogger = log.New(logFile, "ERROR:", log.Lshortfile)
+	port := ":8080"
+
+	fmt.Println("...Starting Forward-Proxy-Server...\n Port : ", port)
 
 	mux := http.NewServeMux()
-	fmt.Printf("%v\n",mux)	
+	mux.HandleFunc("/", baseHandler)
 
-	mux.HandleFunc("/",baseHandler)
-	fmt.Println("this is the port number", port)
-
-	fmt.Println(http.ListenAndServe(port,mux))
+	err = http.ListenAndServe(port, mux)
+	if err != nil {
+		errorLogger.Println("Error while starting a server : ", err)
+	}
 
 }
