@@ -51,9 +51,11 @@ func baseHandler(w http.ResponseWriter, r *http.Request) {
 			outRequest.Header.Add(key, value)
 		}
 	}
-
+	outRequest.Header.Add("X-Forwarded-For",r.RemoteAddr)
 	outRequest.Host = outRequest.URL.Host
 
+	//fmt.Println(outRequest.Header)
+	
 	//creates a client before sending a requset.
 	client := &http.Client{}
 
