@@ -1,0 +1,8 @@
+// Social Media
+facebook.com
+twitter.com
+instagram.com
+
+//Streaming
+youtube.com
+netflix.com
