@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"os"
 	"strings"
+	"time"
 
 	// "net/url"
 	"log"
@@ -27,7 +28,7 @@ func checkForBannedWords(body []byte)bool{
 	}
 	return false
 }
-	
+
 func loadForbids(fileName string) (map[string]bool,error) {
 
 	wordMap := make(map[string]bool)
@@ -61,10 +62,12 @@ func loadForbids(fileName string) (map[string]bool,error) {
 
 func baseHandler(w http.ResponseWriter, r *http.Request) {
 
+	infologger.Println(time.Now(),"-Request from client : ", r.RemoteAddr, " request url : ", r.URL, " request method : ", r.Method)
+
 	targetHostAdd := r.RequestURI
 
-	infologger.Printf("%+v\n", r)
-	infologger.Println("r.requesturi : ", targetHostAdd, "r.remoteaddr : ", r.RemoteAddr)
+	//infologger.Printf("%+v\n", r)
+	//infologger.Println("r.requesturi : ", targetHostAdd, "r.remoteaddr : ", r.RemoteAddr)
 	if targetHostAdd == "" {
 		errorLogger.Println("No host address present")
 		w.Write([]byte("there is no host name in the request"))
@@ -151,6 +154,8 @@ func baseHandler(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		fmt.Println("there is an error while sending the response", err)
 	}
+
+	infologger.Println(r.RemoteAddr, " ", resp.StatusCode, " OK")
 
 }
 func main() {
