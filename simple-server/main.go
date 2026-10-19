@@ -7,7 +7,7 @@ import (
 
 func baseHandler(w http.ResponseWriter, r *http.Request){
 
-	w.Write([]byte("this response is from port simple-server\n"))
+	w.Write([]byte("this response is from port simple-gambling-server\n"))
 }
 
 func main (){

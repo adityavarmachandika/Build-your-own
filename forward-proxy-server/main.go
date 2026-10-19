@@ -13,15 +13,29 @@ import (
 )
 
 var infologger, errorLogger *log.Logger
-var forbiddenHosts map[string]bool
+var forbiddenHosts,bannedWords map[string]bool
 
-func loadForbidHosts(fileName string) map[string]bool {
+
+func checkForBannedWords(body []byte)bool{
+	newbody:=strings.ToLower(string(body))
+
+	for word := range bannedWords {
+		if(strings.Contains(newbody, word)){
+			infologger.Println("banned word found in the response : ",word)
+			return true
+		}
+	}
+	return false
+}
+	
+func loadForbids(fileName string) (map[string]bool,error) {
 
 	wordMap := make(map[string]bool)
 
 	file, err := os.Open(fileName)
 	if err != nil {
-		errorLogger.Println("unable to load the file. filename : ", fileName)
+		errorLogger.Println("unable to load the file. filename : ", fileName," err : ",err)
+		return nil,err
 	}
 
 	defer file.Close()
@@ -39,10 +53,10 @@ func loadForbidHosts(fileName string) map[string]bool {
 
 	if err := scanner.Err(); err != nil {
 		fmt.Printf("Error reading file contents: %v\n", err)
-		return nil
+		return nil,err
 	}
 
-	return wordMap
+	return wordMap,nil
 }
 
 func baseHandler(w http.ResponseWriter, r *http.Request) {
@@ -107,6 +121,19 @@ func baseHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	defer resp.Body.Close()
 
+
+	var tempBody []byte
+	tempBody,err=io.ReadAll(resp.Body)
+
+	if err != nil {
+		fmt.Println("there is an error while sending the response", err)
+	}
+
+	containsBannedWords:=checkForBannedWords(tempBody)
+	if containsBannedWords{
+		http.Error(w, "response not safe", http.StatusBadGateway)
+		return
+	}
 	for key, values := range resp.Header {
 
 		if hopByHopHeaderMap[key] {
@@ -119,7 +146,7 @@ func baseHandler(w http.ResponseWriter, r *http.Request) {
 
 	w.WriteHeader(resp.StatusCode)
 	//copies the response from the client. once done response is returned.
-	_, err = io.Copy(w, resp.Body)
+	_,err=w.Write(tempBody)
 
 	if err != nil {
 		fmt.Println("there is an error while sending the response", err)
@@ -127,11 +154,17 @@ func baseHandler(w http.ResponseWriter, r *http.Request) {
 
 }
 func main() {
+	var err error
+	forbiddenHosts,err = loadForbids("forbidden-hosts.txt")
+	if err != nil || forbiddenHosts==nil {
+		fmt.Println("error while fetching forbidden hosts map",err)
+		return
+	}
 
-	forbiddenHosts = loadForbidHosts("forbidden-hosts.txt")
-
-	if forbiddenHosts != nil {
-		fmt.Println(forbiddenHosts)
+	bannedWords,err=loadForbids("banned-words.txt")
+	if err!=nil || bannedWords==nil{
+		fmt.Println("error while fetching banned words map")
+		return
 	}
 
 	logFile, err := os.OpenFile("forwardProxyServer.log", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0600)
