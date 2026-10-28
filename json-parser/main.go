@@ -9,30 +9,33 @@ import (
 
 func parseBrackets(unknown string)(bool){
 
-	bracketMap:=map[rune]rune{
+	closedBracketMap:=map[rune]rune{
 		'}':'{',
 		']':'[',
 		')':'(',
+	}
+	openBracketMap:=map[rune]rune{
+		'{':'}',
+		'[':']',
+		'(':')',
 	}
 
 
 	var stack []rune
 
 	for _,char :=range unknown{
-		if _,ok :=bracketMap[char]; !ok{
+		if _,ok :=openBracketMap[char]; ok{
 			stack = append(stack, char)
 			continue
-		}
-		if len(stack)==0{
-			return false
-		}
-		n:=len(stack)-1
-		if bracketMap[char]!=stack[n]{
-			return false
-		}
-		stack= stack[:n]
-		for _,char :=range stack{
-			fmt.Printf("%c",char)
+		}else if _,ok:=closedBracketMap[char]; ok{
+			if len(stack)==0 {
+				return false
+			}
+			n:=len(stack)-1
+			if closedBracketMap[char]!=stack[n]{
+				return false
+			}
+			stack= stack[:n]
 		}
 	}
 
@@ -41,15 +44,42 @@ func parseBrackets(unknown string)(bool){
 	return len(stack)==0
 }
 
+// Optimized Switch implementation
+func parseBracketsOptimized(unknown string) bool {
+	var stack []rune
 
+	for _, char := range unknown {
+		switch char {
+		case '{', '[', '(':
+			stack = append(stack, char)
+		case '}':
+			if len(stack) == 0 || stack[len(stack)-1] != '{' {
+				return false
+			}
+			stack = stack[:len(stack)-1]
+		case ']':
+			if len(stack) == 0 || stack[len(stack)-1] != '[' {
+				return false
+			}
+			stack = stack[:len(stack)-1]
+		case ')':
+			if len(stack) == 0 || stack[len(stack)-1] != '(' {
+				return false
+			}
+			stack = stack[:len(stack)-1]
+		}
+	}
+	return len(stack) == 0
+}
 
 func main(){
 	fmt.Println("-----json parser-----")
 
 	//unknownJSON := `{"name": "Alice", "age": 30, "skills": ["Go", "Python"], "active": true}`
 	unknownbracketjson:=`([])`
-
-	if valid:=parseBrackets(unknownbracketjson); valid{
+	
+	//if valid:=parseBrackets(unknownbracketjson); valid{
+	if valid:=parseBracketsOptimized(unknownbracketjson); valid{
 		fmt.Println("parsed succesfull")
 		return
 	}
