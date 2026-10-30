@@ -10,7 +10,7 @@ import (
 func BenchmarkParseBracketsOriginal(b *testing.B) {
 	input := `{"name": "Alice", "age": 30, "skills": ["Go", "Python"], "active": true}`
 	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		parseBrackets(input)
 	}
 }
@@ -19,7 +19,7 @@ func BenchmarkParseBracketsOriginal(b *testing.B) {
 func BenchmarkParseBracketsOptimized(b *testing.B) {
 	input := `{"name": "Alice", "age": 30, "skills": ["Go", "Python"], "active": true}`
 	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		parseBracketsOptimized(input)
 	}
 }

@@ -6,7 +6,6 @@ import (
 )
 
 
-
 func parseBrackets(unknown string)(bool){
 
 	closedBracketMap:=map[rune]rune{
@@ -76,7 +75,7 @@ func main(){
 	fmt.Println("-----json parser-----")
 
 	//unknownJSON := `{"name": "Alice", "age": 30, "skills": ["Go", "Python"], "active": true}`
-	unknownbracketjson:=`([])`
+	unknownbracketjson:=`{"message": "This is invalid structural JSON }["}`
 	
 	//if valid:=parseBrackets(unknownbracketjson); valid{
 	if valid:=parseBracketsOptimized(unknownbracketjson); valid{
