@@ -90,25 +90,32 @@ func recursion(unknown string,in *int)(map[string]any,error){
 	index:=*in
 	for ;index<len(unknown);index++{
 
+		removeWhiteSpaces(unknown,&index)
 		char :=unknown[index]
 		switch char {
 
 			case '{',',':
 				index++
+				removeWhiteSpaces(unknown,&index)
+				if index < len(unknown) && unknown[index] == '}' {
+					index-- // Let the loop's index++ land on '}'
+					continue
+				}
 				key,err=getString(unknown,&index)
 				if err!=nil{
 					return nil,err
 				}
-				break;
+			break
 			case ':':
-				char=unknown[index+1]
-				if char =='{'{
+				index++
+				removeWhiteSpaces(unknown,&index)
+				char=unknown[index]
+				if char =='{'{	
 					value,err=recursion(unknown,&index)
 					if err !=nil{
 						return nil,err
 					}
 				}else if char =='"'{
-					index++
 					value,err=getString(unknown,&index)
 					if err!=nil{
 						return nil,err
@@ -118,7 +125,7 @@ func recursion(unknown string,in *int)(map[string]any,error){
 				}
 				k,_:=key.(string)
 				result[k]=value
-				break;
+			break
 			case '}' :
 				*in=index
 				return result,nil
@@ -157,10 +164,16 @@ func parseJsonOptimized(unknown string){
 	//fmt.Println(data)
 }
 
+func removeWhiteSpaces(unknown string,index *int){
+	for *index <len(unknown) && (unknown[*index] == ' ' || unknown[*index] == '\t' || unknown[*index] == '\n' || unknown[*index] == '\r'){
+		*index++
+	}
+}
+
 func main() {
 	fmt.Println("-----json parser-----")
 
-	unknownJSON := `{"name":"Alice","age":"30","skills":"Python","active":"true"}`
+	unknownJSON := `{"name":"Alice",  "age":"30"  ,"skills":"Python","active":"true"}`
 	//unknownbracketjson:=`{"message": "This is invalid structural JSON }"}`
 	
 	parseJsonOptimized(unknownJSON)
