@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 )
 
@@ -66,46 +67,110 @@ func parseBracketsOptimized(unknown string) bool {
 	return len(stack) == 0
 }
 
-func parseSimpleKeyValue(unknown string) map[string]string {
-	tempres := make(map[string]string)
-	var subchar []rune
-	var key, value string
-	for _, char := range unknown {
-		if char == ':' {
-			key = string(subchar)
-			subchar = subchar[:0]
-		} else if char == ',' {
-			value = string(subchar)
-			subchar = subchar[:0]
-			if key != "" {
-				tempres[key] = value
-			}
-		} else {
-			if char != '}' && char != '{' && char != '"' {
-				subchar = append(subchar, char)
-			}
+func parseJson(unknown string) (map[string]any,error ){
+
+	if valid := parseBracketsOptimized(unknown); !valid {
+		fmt.Println("unable to parse")
+		return nil,fmt.Errorf("Not a valid json")
+	}
+	index :=0
+	prasedJson,err := recursion(unknown,&index)
+	if err!=nil{
+		return nil, err
+	}
+	return prasedJson,nil
+}
+
+func recursion(unknown string,in *int)(map[string]any,error){
+
+	result:=make(map[string]any)
+	var key,value any
+	var err error
+
+	index:=*in
+	for ;index<len(unknown);index++{
+
+		char :=unknown[index]
+		switch char {
+
+			case '{',',':
+				index++
+				key,err=getString(unknown,&index)
+				if err!=nil{
+					return nil,err
+				}
+				break;
+			case ':':
+				char=unknown[index+1]
+				if char =='{'{
+					value,err=recursion(unknown,&index)
+					if err !=nil{
+						return nil,err
+					}
+				}else if char =='"'{
+					index++
+					value,err=getString(unknown,&index)
+					if err!=nil{
+						return nil,err
+					}
+				}else if char =='['{
+
+				}
+				k,_:=key.(string)
+				result[k]=value
+				break;
+			case '}' :
+				*in=index
+				return result,nil
+		}
+		
+	}
+	return result,nil
+}
+
+func getString(unknown string, i *int)(any,error){
+
+	var data string
+	index:=*i
+	if(unknown[index]!='"'){
+		return "",fmt.Errorf("invalid json. missing \", currrent string is %c and index is %d", unknown[index],index)
+	}
+	index++;
+	for  ;index<len(unknown);index++{
+		char :=unknown[index]
+		if char !='"'{
+			data+=string(char)
+		}else{
+			break;
 		}
 	}
-	if key != "" && len(subchar) > 0 {
-		tempres[key] = string(subchar)
-	}
-	fmt.Println(tempres)
+	*i=index
+	return data,nil
+}
 
-	return tempres
+func parseJsonOptimized(unknown string){
+	var data any
+	if err:=json.Unmarshal([]byte(unknown),&data); err !=nil{
+		//fmt.Println("there was an error while extracting")
+		fmt.Println(err)
+	}
+	//fmt.Println(data)
 }
 
 func main() {
 	fmt.Println("-----json parser-----")
 
-	unknownJSON := `{"name": "Alice", "age": 30, "skills": "Python", "active": true}`
+	unknownJSON := `{"name":"Alice","age":"30","skills":"Python","active":"true"}`
 	//unknownbracketjson:=`{"message": "This is invalid structural JSON }"}`
+	
+	parseJsonOptimized(unknownJSON)
 
-	//if valid:=parseBrackets(unknownbracketjson); valid{
-	if valid := parseBracketsOptimized(unknownJSON); !valid {
-		fmt.Println("unable to parse")
+	res,err := parseJson(unknownJSON)
 
+	if err!=nil{
+		fmt.Println(err)
 	}
 
-	_ = parseSimpleKeyValue(unknownJSON)
+	fmt.Println(res)
 
 }
