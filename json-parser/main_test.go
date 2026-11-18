@@ -27,7 +27,6 @@ func BenchmarkParseSimpleKeyValue(b *testing.B) {
 
 	b.ResetTimer()
 	for b.Loop() {
-		parseBracketsOptimized(input)
 		parseJson(input)
 	}
 }
