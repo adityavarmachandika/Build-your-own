@@ -51,7 +51,7 @@ func loadForbids(fileName string) (map[string]bool, error) {
 			wordMap[line] = true
 		}
 	}
- 
+
 	if err := scanner.Err(); err != nil {
 		fmt.Printf("Error reading file contents: %v\n", err)
 		return nil, err
@@ -65,8 +65,7 @@ func baseHandler(w http.ResponseWriter, r *http.Request) {
 	//infologger.Printf("%+v\n", r)
 	if r.Method == http.MethodConnect {
 
-
-		hostName:=strings.TrimPrefix(r.URL.Hostname(),"www.")
+		hostName := strings.TrimPrefix(r.URL.Hostname(), "www.")
 		if forbiddenHosts[hostName] {
 			infologger.Println("A forbidden host requested")
 			w.WriteHeader(http.StatusForbidden)
